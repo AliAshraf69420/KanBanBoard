@@ -83,9 +83,10 @@ export function createSyncQueueItem({
 /**
  * Create a snapshot for undo/redo
  */
-export function createBoardSnapshot({ lists, cards }) {
+export function createBoardSnapshot({ lists, cards, listOrder }) {
   return {
     lists: structuredClone(lists),
     cards: structuredClone(cards),
+    listOrder: structuredClone(listOrder),
   };
 }

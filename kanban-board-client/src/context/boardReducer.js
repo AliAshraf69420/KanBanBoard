@@ -17,7 +17,6 @@ export function boardReducer(state, action) {
       const { listId, title, description, tags } = action.payload;
       const newCard = createCard({ listId, title, description, tags });
 
-      // prevent duplicates just in case
       const oldCardIds = state.lists[listId].cardIds.filter(
         (id) => id !== newCard.id
       );
@@ -100,15 +99,10 @@ export function boardReducer(state, action) {
       const fromList = state.lists[fromListId];
       const toList = state.lists[toListId];
 
-      // Remove card from old list
       const newFromCardIds = fromList.cardIds.filter((id) => id !== cardId);
 
-      // Insert at targetIndex in new list
       let newToCardIds = [...toList.cardIds];
-
-      // Prevent duplicate just in case
-      newToCardIds = newToCardIds.filter((id) => id !== cardId);
-
+      newToCardIds = newToCardIds.filter((id) => id !== cardId); // prevent duplicate
       newToCardIds.splice(targetIndex, 0, cardId);
 
       return {
@@ -147,6 +141,7 @@ export function boardReducer(state, action) {
 
     case "UNDO": {
       if (!state.undoStack || state.undoStack.length === 0) return state;
+
       const previous = state.undoStack[state.undoStack.length - 1];
 
       return {
@@ -155,12 +150,13 @@ export function boardReducer(state, action) {
         cards: structuredClone(previous.cards),
         listOrder: structuredClone(previous.listOrder),
         undoStack: state.undoStack.slice(0, -1),
-        redoStack: [...state.redoStack, createBoardSnapshot(state)],
+        redoStack: [...state.redoStack, createBoardSnapshot(state)], // current state goes into redo
       };
     }
 
     case "REDO": {
       if (!state.redoStack || state.redoStack.length === 0) return state;
+
       const next = state.redoStack[state.redoStack.length - 1];
 
       return {
@@ -169,7 +165,7 @@ export function boardReducer(state, action) {
         cards: structuredClone(next.cards),
         listOrder: structuredClone(next.listOrder),
         redoStack: state.redoStack.slice(0, -1),
-        undoStack: [...state.undoStack, createBoardSnapshot(state)],
+        undoStack: [...state.undoStack, createBoardSnapshot(state)], // current state goes back to undo
       };
     }
 
