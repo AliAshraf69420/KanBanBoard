@@ -4,9 +4,13 @@ import { useOfflineSync } from "./hooks/useOfflineSync";
 import Board from "./components/Board";
 
 export default function App() {
-  useOfflineSync();
+  // First get the board state and undo/redo functions
   const { undo, redo } = useBoardState();
 
+  // Then call offline sync
+  useOfflineSync();
+
+  // Keyboard shortcuts for undo/redo
   useEffect(() => {
     const handleKeyDown = (e) => {
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;

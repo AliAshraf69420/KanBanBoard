@@ -3,11 +3,10 @@ import List from "./List";
 
 export default function Board() {
   const { state, addList } = useBoardState();
-  const lists = Object.values(state.lists);
+  const lists = (state.listOrder || []).map((id) => state.lists[id]);
 
   return (
     <div>
-      {/* Add List Button */}
       <div className="mb-4">
         <button
           type="button"
@@ -18,12 +17,10 @@ export default function Board() {
         </button>
       </div>
 
-      {/* Board Columns */}
       <div className="flex flex-wrap gap-4">
         {lists.length === 0 && (
           <p className="text-obsidian-muted">No lists yet</p>
         )}
-
         {lists.map((list) => (
           <List
             key={list.id}

@@ -11,8 +11,20 @@ export default function Card({ card }) {
     setIsEditing(false);
   };
 
+  // Drag start for moving card
+  const handleDragStart = (e) => {
+    e.stopPropagation(); // Prevent parent list from also starting drag
+    e.dataTransfer.setData(
+      "text/plain",
+      JSON.stringify({ cardId: card.id, fromListId: card.listId })
+    );
+    e.dataTransfer.effectAllowed = "move";
+  };
+
   return (
     <div
+      draggable
+      onDragStart={handleDragStart}
       className="bg-obsidian-bg border border-obsidian-border rounded p-2 flex justify-between items-center"
       tabIndex={0}
       onKeyDown={(e) => {
@@ -22,29 +34,33 @@ export default function Card({ card }) {
         }
       }}
     >
+      {/* Card title / inline edit */}
       {isEditing ? (
         <input
           className="bg-obsidian-bg border border-obsidian-border rounded px-2 py-1 text-sm text-obsidian-text w-full"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onBlur={handleSubmit}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleSubmit();
-          }}
+          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           autoFocus
         />
       ) : (
-        <div className="text-sm font-medium cursor-pointer flex-1">
+        <div
+          className="text-sm font-medium cursor-pointer flex-1"
+          onClick={() => setIsEditing(true)}
+        >
           {card.title}
         </div>
       )}
 
+      {/* Remove button */}
       <button
         type="button"
         onClick={(e) => {
           e.stopPropagation();
           removeCard(card.listId, card.id);
         }}
+        onKeyDown={(e) => e.stopPropagation()} // prevent Enter from triggering parent rename
         className="ml-2 text-xs px-2 py-1 rounded bg-red-600 hover:bg-red-700 text-white transition"
         title="Remove Card"
       >

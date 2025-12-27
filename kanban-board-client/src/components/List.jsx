@@ -3,7 +3,8 @@ import { useBoardState } from "../hooks/useBoardState";
 import Card from "./Card";
 
 export default function List({ list }) {
-  const { state, addCard, renameList, removeList } = useBoardState();
+  const { state, addCard, renameList, removeList, moveCard, moveList } =
+    useBoardState();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(list.title);
 
@@ -12,10 +13,41 @@ export default function List({ list }) {
     setIsEditingTitle(false);
   };
 
+  // Drag & drop handlers for lists
+  const handleDragStart = (e) => {
+    e.dataTransfer.setData("text/plain", JSON.stringify({ listId: list.id }));
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDropOnList = (e) => {
+    e.preventDefault();
+    const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+    if (data.listId && data.listId !== list.id) {
+      moveList(data.listId, list.id);
+    }
+  };
+
+  const handleDragOverList = (e) => e.preventDefault();
+
+  // Drop cards at end of list if not over a specific card
+  const handleDropOnCardsContainer = (e) => {
+    e.preventDefault();
+    const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+    if (data.cardId && data.fromListId) {
+      moveCard(data.cardId, data.fromListId, list.id, list.cardIds.length);
+    }
+  };
+
+  const handleDragOverCardsContainer = (e) => e.preventDefault();
+
   return (
     <div
-      className="w-[calc(20%-1rem)] min-w-[260px] bg-obsidian-surface border border-obsidian-border rounded p-4 flex flex-col gap-3"
+      draggable
+      onDragStart={handleDragStart}
+      onDrop={handleDropOnList}
+      onDragOver={handleDragOverList}
       tabIndex={0}
+      className="w-[260px] bg-obsidian-surface border border-obsidian-border rounded p-4 flex flex-col gap-3"
       onKeyDown={(e) => {
         if (e.key === "Enter" && !isEditingTitle) {
           e.preventDefault();
@@ -31,13 +63,14 @@ export default function List({ list }) {
             value={titleInput}
             onChange={(e) => setTitleInput(e.target.value)}
             onBlur={handleTitleSubmit}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleTitleSubmit();
-            }}
+            onKeyDown={(e) => e.key === "Enter" && handleTitleSubmit()}
             autoFocus
           />
         ) : (
-          <h3 className="text-lg font-semibold cursor-pointer flex-1">
+          <h3
+            className="text-lg font-semibold cursor-pointer flex-1"
+            onClick={() => setIsEditingTitle(true)}
+          >
             {list.title}
           </h3>
         )}
@@ -48,6 +81,7 @@ export default function List({ list }) {
             e.stopPropagation();
             removeList(list.id);
           }}
+          onKeyDown={(e) => e.stopPropagation()}
           className="ml-2 text-xs px-2 py-1 rounded bg-red-600 hover:bg-red-700 text-white transition"
           title="Remove List"
         >
@@ -55,19 +89,38 @@ export default function List({ list }) {
         </button>
       </div>
 
-      {/* Cards */}
-      <div className="flex flex-col gap-2">
+      {/* Cards Container */}
+      <div
+        className="flex flex-col gap-2"
+        onDrop={handleDropOnCardsContainer}
+        onDragOver={handleDragOverCardsContainer}
+      >
         {list.cardIds.length === 0 && (
           <p className="text-obsidian-muted text-sm">No cards</p>
         )}
-        {list.cardIds.map((id) => {
-          const card = list.cards?.[id] || state.cards?.[id];
+        {list.cardIds.map((id, idx) => {
+          const card = state.cards[id];
           if (!card) return null;
+
+          // Drop handler for inserting before this card
+          const handleDropOnCard = (e) => {
+            e.preventDefault();
+            const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+            if (data.cardId && data.fromListId) {
+              moveCard(data.cardId, data.fromListId, list.id, idx);
+            }
+          };
+
+          const handleDragOverCard = (e) => e.preventDefault();
+
           return (
-            <Card
+            <div
               key={id}
-              card={card}
-            />
+              onDrop={handleDropOnCard}
+              onDragOver={handleDragOverCard}
+            >
+              <Card card={card} />
+            </div>
           );
         })}
       </div>
@@ -76,10 +129,10 @@ export default function List({ list }) {
       <button
         type="button"
         onClick={(e) => {
-          e.stopPropagation(); // prevent bubbling
+          e.stopPropagation();
           addCard(list.id, "New Card");
         }}
-        onKeyDown={(e) => e.stopPropagation()} // optional extra safety
+        onKeyDown={(e) => e.stopPropagation()}
         className="mt-2 px-3 py-1 rounded border border-obsidian-border bg-obsidian-bg text-obsidian-text text-sm hover:bg-obsidian-surface transition"
       >
         + Add Card
