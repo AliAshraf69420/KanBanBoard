@@ -1,35 +1,56 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect } from "react";
+import { useBoardState } from "./hooks/useBoardState";
+import { useOfflineSync } from "./hooks/useOfflineSync";
+import Board from "./components/Board";
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  useOfflineSync();
+  const { undo, redo } = useBoardState();
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+      const ctrlOrCmd = isMac ? e.metaKey : e.ctrlKey;
+
+      if (ctrlOrCmd && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      }
+
+      if (
+        ctrlOrCmd &&
+        ((isMac && e.shiftKey && e.key === "Z") || (!isMac && e.key === "y"))
+      ) {
+        e.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [undo, redo]);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <div className="dark min-h-screen p-6 bg-obsidian-bg text-obsidian-text">
+      <header className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Kanban Board</h1>
+        <div className="flex gap-2">
+          <button
+            onClick={undo}
+            className="px-3 py-1 rounded border border-obsidian-border bg-obsidian-surface text-obsidian-text hover:bg-obsidian-bg transition"
+          >
+            Undo
+          </button>
+          <button
+            onClick={redo}
+            className="px-3 py-1 rounded border border-obsidian-border bg-obsidian-surface text-obsidian-text hover:bg-obsidian-bg transition"
+          >
+            Redo
+          </button>
+        </div>
+      </header>
 
-export default App
+      <Board />
+    </div>
+  );
+}
