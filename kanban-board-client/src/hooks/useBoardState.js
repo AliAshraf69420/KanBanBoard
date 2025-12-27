@@ -49,6 +49,15 @@ export function useBoardState() {
     [dispatch]
   );
 
+  const updateCard = useCallback(
+    (cardId, updates) =>
+      dispatch({
+        type: "UPDATE_CARD",
+        payload: { cardId, updates },
+      }),
+    [dispatch]
+  );
+
   const removeList = useCallback(
     (listId) => dispatch({ type: "REMOVE_LIST", payload: { listId } }),
     [dispatch]
@@ -86,6 +95,7 @@ export function useBoardState() {
     addCard,
     renameList,
     renameCard,
+    updateCard,
     removeList,
     removeCard,
     undo,
