@@ -1,5 +1,8 @@
 import '@testing-library/jest-dom';
 
+// Mock UUID module - Jest will automatically use __mocks__/uuid.js
+jest.mock('uuid');
+
 // Mock IndexedDB
 import 'fake-indexeddb/auto';
 
@@ -30,4 +33,10 @@ global.console = {
   error: jest.fn(),
   warn: jest.fn(),
 };
+
+// Reset UUID counter before each test
+beforeEach(() => {
+  global.__uuidCounter = 0;
+  jest.clearAllMocks();
+});
 

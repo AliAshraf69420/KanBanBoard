@@ -1,4 +1,4 @@
-export default {
+module.exports = {
   testEnvironment: 'jsdom',
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.{js,jsx}', '**/?(*.)+(spec|test).{js,jsx}'],
@@ -16,6 +16,7 @@ export default {
     '!src/**/*.test.{js,jsx}',
     '!src/**/__tests__/**',
     '!src/setupTests.js',
+    '!src/__mocks__/**',
   ],
   coverageThreshold: {
     global: {
@@ -29,5 +30,9 @@ export default {
     'node_modules/(?!(uuid)/)',
   ],
   testTimeout: 10000,
+  // Ensure mocks are cleared between tests
+  clearMocks: true,
+  resetMocks: true,
+  restoreMocks: true,
 };
 

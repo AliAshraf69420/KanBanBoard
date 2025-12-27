@@ -19,7 +19,11 @@ describe('models', () => {
       const list1 = createList({ title: 'List 1' });
       const list2 = createList({ title: 'List 2' });
       
+      expect(list1.id).toBeDefined();
+      expect(list2.id).toBeDefined();
       expect(list1.id).not.toBe(list2.id);
+      expect(list1.id).toMatch(/^test-uuid-\d+$/);
+      expect(list2.id).toMatch(/^test-uuid-\d+$/);
     });
   });
 
@@ -53,7 +57,11 @@ describe('models', () => {
       const card1 = createCard({ listId: 'list-1', title: 'Card 1' });
       const card2 = createCard({ listId: 'list-1', title: 'Card 2' });
       
+      expect(card1.id).toBeDefined();
+      expect(card2.id).toBeDefined();
       expect(card1.id).not.toBe(card2.id);
+      expect(card1.id).toMatch(/^test-uuid-\d+$/);
+      expect(card2.id).toMatch(/^test-uuid-\d+$/);
     });
   });
 
