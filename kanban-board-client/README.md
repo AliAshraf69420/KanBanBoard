@@ -1,16 +1,75 @@
-# React + Vite
+# Kanban Board
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A collaborative Kanban board single-page application built with React.
 
-Currently, two official plugins are available:
+## Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+1. Install dependencies:
+```bash
+npm install
+```
 
-## React Compiler
+2. Create `.env` file in the Server directory:
+```
+MONGO_URI=mongodb://localhost:27017/kanban-board
+PORT=4000
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+3. Start MongoDB (if not already running)
 
-## Expanding the ESLint configuration
+4. Start the server:
+```bash
+cd Server
+npm run dev
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+5. In another terminal, start the client:
+```bash
+cd kanban-board-client
+npm run dev
+```
+
+## Testing
+
+### Unit Tests
+Run unit tests with Jest:
+```bash
+npm test
+```
+
+Run tests in watch mode:
+```bash
+npm run test:watch
+```
+
+Generate coverage report:
+```bash
+npm run test:coverage
+```
+
+### End-to-End Tests
+Run Playwright e2e tests:
+```bash
+npm run e2e
+```
+
+## Project Structure
+
+```
+src/
+  components/        # React components
+  context/          # Context providers and reducers
+  hooks/            # Custom hooks
+  services/         # API and storage services
+  utils/            # Utility functions and models
+  __tests__/        # Test files
+```
+
+## Architecture
+
+The application uses:
+- React with Context API and useReducer for state management
+- IndexedDB for local persistence
+- Express server with MongoDB for data synchronization
+- Optimistic UI updates with conflict resolution
+- Offline-first architecture with sync queue
