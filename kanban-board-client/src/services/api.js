@@ -6,8 +6,9 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Disable simulated failures for production - uncomment for testing
 function shouldFail() {
-  return Math.random() < 0.1; // 10% simulated failure
+  return false; // Math.random() < 0.1; // 10% simulated failure
 }
 
 /* -------------------- SYNC ACTION -------------------- */
@@ -19,10 +20,18 @@ export async function syncAction(syncItem) {
     throw new Error("Simulated network failure");
   }
 
+  // Extract the action data from the sync queue item
+  // The syncItem contains: { id, type, payload, clientVersion }
+  const action = {
+    type: syncItem.type,
+    payload: syncItem.payload,
+    clientVersion: syncItem.clientVersion,
+  };
+
   const res = await fetch(`${API_BASE_URL}/sync`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(syncItem),
+    body: JSON.stringify(action),
   });
 
   if (res.status === 409) {

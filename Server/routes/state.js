@@ -4,19 +4,24 @@ import Board from "../models/Board.js";
 const router = express.Router();
 
 router.get("/", async (req, res) => {
-  const board = await Board.findOne();
+  try {
+    const board = await Board.findOne();
 
-  if (!board) {
-    return res.json({
-      exists: false,
-      version: 0,
+    if (!board) {
+      return res.json({
+        exists: false,
+        version: 0,
+      });
+    }
+
+    res.json({
+      exists: true,
+      version: board.version || 0,
     });
+  } catch (error) {
+    console.error("Error fetching board state:", error);
+    res.status(500).json({ error: "Failed to fetch board state" });
   }
-
-  res.json({
-    exists: true,
-    version: board.version,
-  });
 });
 
 export default router;

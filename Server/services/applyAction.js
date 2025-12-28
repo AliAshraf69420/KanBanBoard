@@ -1,6 +1,7 @@
 export function applyAction(board, action) {
   switch (action.type) {
     case "ADD_LIST": {
+      if (!board.lists) board.lists = {};
       board.lists[action.payload.id] = action.payload;
       break;
     }
@@ -22,8 +23,15 @@ export function applyAction(board, action) {
     }
 
     case "ADD_CARD": {
+      if (!board.cards) board.cards = {};
+      if (!board.lists) board.lists = {};
       board.cards[action.payload.id] = action.payload;
-      board.lists[action.payload.listId].cardIds.push(action.payload.id);
+      if (board.lists[action.payload.listId]) {
+        if (!board.lists[action.payload.listId].cardIds) {
+          board.lists[action.payload.listId].cardIds = [];
+        }
+        board.lists[action.payload.listId].cardIds.push(action.payload.id);
+      }
       break;
     }
 
@@ -40,9 +48,24 @@ export function applyAction(board, action) {
       if (!card) break;
 
       const list = board.lists[card.listId];
-      list.cardIds = list.cardIds.filter((id) => id !== card.id);
+      if (list) {
+        list.cardIds = list.cardIds.filter((id) => id !== card.id);
+      }
 
       delete board.cards[card.id];
+      break;
+    }
+
+    case "DELETE_LIST": {
+      const list = board.lists[action.payload.listId];
+      if (!list) break;
+
+      // Delete all cards in the list
+      list.cardIds.forEach((cardId) => {
+        delete board.cards[cardId];
+      });
+
+      delete board.lists[action.payload.listId];
       break;
     }
 
@@ -60,6 +83,7 @@ export function applyAction(board, action) {
     }
   }
 
+  if (board.version === undefined) board.version = 0;
   board.version++;
   return board;
 }
