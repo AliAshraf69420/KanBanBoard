@@ -5,6 +5,7 @@ export default function Card({ card }) {
   const { renameCard, removeCard } = useBoardState();
   const [isEditing, setIsEditing] = useState(false);
   const [input, setInput] = useState(card.title);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleSubmit = () => {
     renameCard(card.id, input.trim() || card.title);
@@ -14,18 +15,29 @@ export default function Card({ card }) {
   // Drag start for moving card
   const handleDragStart = (e) => {
     e.stopPropagation(); // Prevent parent list from also starting drag
+    setIsDragging(true);
     e.dataTransfer.setData(
       "text/plain",
       JSON.stringify({ cardId: card.id, fromListId: card.listId })
     );
     e.dataTransfer.effectAllowed = "move";
+    // Set drag image opacity
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDragEnd = (e) => {
+    e.stopPropagation();
+    setIsDragging(false);
   };
 
   return (
     <div
-      draggable
+      draggable={!isEditing}
       onDragStart={handleDragStart}
-      className="bg-obsidian-bg border border-obsidian-border rounded p-2 flex justify-between items-center"
+      onDragEnd={handleDragEnd}
+      className={`bg-obsidian-bg border border-obsidian-border rounded p-2 flex justify-between items-center transition-opacity ${
+        isDragging ? "opacity-50" : "opacity-100"
+      } ${!isEditing ? "cursor-grab active:cursor-grabbing" : ""}`}
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.key === "Enter" && !isEditing) {
