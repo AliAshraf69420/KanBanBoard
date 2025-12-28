@@ -51,6 +51,8 @@ export function createEmptyBoardState() {
   return {
     lists: {},
     cards: {},
+    listOrder: [],
+    version: 0,
     syncQueue: [],
     undoStack: [],
     redoStack: [],

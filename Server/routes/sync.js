@@ -5,29 +5,39 @@ import { applyAction } from "../services/applyAction.js";
 const router = express.Router();
 
 router.post("/", async (req, res) => {
-  const action = req.body;
+  try {
+    const action = req.body;
 
-  let board = await Board.findOne();
+    if (!action || !action.type) {
+      return res.status(400).json({ error: "Invalid action format" });
+    }
 
-  if (!board) {
-    board = await Board.create({
-      lists: {},
-      cards: {},
-      version: 0,
-    });
+    let board = await Board.findOne();
+
+    if (!board) {
+      board = await Board.create({
+        lists: {},
+        cards: {},
+        version: 0,
+      });
+    }
+
+    if (action.clientVersion !== undefined && action.clientVersion < board.version) {
+      return res.status(409).json({
+        message: "Version conflict",
+        serverVersion: board.version,
+        clientVersion: action.clientVersion,
+      });
+    }
+
+    board = applyAction(board, action);
+    await board.save();
+
+    res.json({ success: true, version: board.version });
+  } catch (error) {
+    console.error("Sync error:", error);
+    res.status(500).json({ error: "Failed to sync action", message: error.message });
   }
-
-  if (action.clientVersion < board.version) {
-    return res.status(409).json({
-      message: "Version conflict",
-      serverVersion: board.version,
-    });
-  }
-
-  board = applyAction(board, action);
-  await board.save();
-
-  res.json({ success: true, version: board.version });
 });
 
 export default router;

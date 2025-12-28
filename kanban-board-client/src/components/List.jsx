@@ -7,6 +7,8 @@ export default function List({ list }) {
     useBoardState();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(list.title);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   const handleTitleSubmit = () => {
     renameList(list.id, titleInput.trim() || list.title);
@@ -15,35 +17,67 @@ export default function List({ list }) {
 
   // Drag & drop handlers for lists
   const handleDragStart = (e) => {
+    // Only allow list dragging from the header area (not from cards)
+    // Cards will stopPropagation, so if we get here, it's a list drag
     e.dataTransfer.setData("text/plain", JSON.stringify({ listId: list.id }));
     e.dataTransfer.effectAllowed = "move";
   };
 
   const handleDropOnList = (e) => {
     e.preventDefault();
-    const data = JSON.parse(e.dataTransfer.getData("text/plain"));
-    if (data.listId && data.listId !== list.id) {
-      moveList(data.listId, list.id);
+    e.stopPropagation();
+    setIsDraggingOver(false);
+    setDragOverIndex(null);
+    try {
+      const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+      if (data.listId && data.listId !== list.id) {
+        moveList(data.listId, list.id);
+      }
+    } catch (error) {
+      // Invalid data, ignore
     }
   };
 
-  const handleDragOverList = (e) => e.preventDefault();
+  const handleDragOverList = (e) => {
+    // Allow dropping lists - we'll validate in drop handler
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
 
   // Drop cards at end of list if not over a specific card
   const handleDropOnCardsContainer = (e) => {
     e.preventDefault();
-    const data = JSON.parse(e.dataTransfer.getData("text/plain"));
-    if (data.cardId && data.fromListId) {
-      moveCard(data.cardId, data.fromListId, list.id, list.cardIds.length);
+    e.stopPropagation();
+    setIsDraggingOver(false);
+    setDragOverIndex(null);
+    try {
+      const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+      if (data.cardId && data.fromListId) {
+        moveCard(data.cardId, data.fromListId, list.id, list.cardIds.length);
+      }
+    } catch (error) {
+      // Invalid data, ignore
     }
   };
 
-  const handleDragOverCardsContainer = (e) => e.preventDefault();
+  const handleDragOverCardsContainer = (e) => {
+    // Allow dropping cards - we'll validate in drop handler
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "move";
+    setIsDraggingOver(true);
+  };
+
+  const handleDragLeaveCardsContainer = (e) => {
+    // Only reset if we're actually leaving the container
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setIsDraggingOver(false);
+      setDragOverIndex(null);
+    }
+  };
 
   return (
     <div
-      draggable
-      onDragStart={handleDragStart}
       onDrop={handleDropOnList}
       onDragOver={handleDragOverList}
       tabIndex={0}
@@ -55,8 +89,12 @@ export default function List({ list }) {
         }
       }}
     >
-      {/* List Header */}
-      <div className="flex justify-between items-center mb-2">
+      {/* List Header - draggable area for list */}
+      <div
+        draggable={!isEditingTitle}
+        onDragStart={handleDragStart}
+        className="flex justify-between items-center mb-2 cursor-grab active:cursor-grabbing"
+      >
         {isEditingTitle ? (
           <input
             className="flex-1 bg-obsidian-bg border border-obsidian-border rounded px-2 py-1 text-sm text-obsidian-text"
@@ -91,12 +129,19 @@ export default function List({ list }) {
 
       {/* Cards Container */}
       <div
-        className="flex flex-col gap-2"
+        className={`flex flex-col gap-2 min-h-[50px] transition-colors ${
+          isDraggingOver && list.cardIds.length === 0
+            ? "bg-obsidian-bg/50 rounded border-2 border-dashed border-obsidian-border"
+            : ""
+        }`}
         onDrop={handleDropOnCardsContainer}
         onDragOver={handleDragOverCardsContainer}
+        onDragLeave={handleDragLeaveCardsContainer}
       >
         {list.cardIds.length === 0 && (
-          <p className="text-obsidian-muted text-sm">No cards</p>
+          <p className="text-obsidian-muted text-sm py-2">
+            {isDraggingOver ? "Drop card here" : "No cards"}
+          </p>
         )}
         {list.cardIds.map((id, idx) => {
           const card = state.cards[id];
@@ -105,19 +150,57 @@ export default function List({ list }) {
           // Drop handler for inserting before this card
           const handleDropOnCard = (e) => {
             e.preventDefault();
-            const data = JSON.parse(e.dataTransfer.getData("text/plain"));
-            if (data.cardId && data.fromListId) {
-              moveCard(data.cardId, data.fromListId, list.id, idx);
+            e.stopPropagation();
+            setDragOverIndex(null);
+            try {
+              const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+              if (data.cardId && data.fromListId) {
+                // Don't move if it's the same position
+                if (
+                  data.fromListId !== list.id ||
+                  data.cardId !== id ||
+                  idx !==
+                    list.cardIds.findIndex((cid) => cid === data.cardId)
+                ) {
+                  moveCard(data.cardId, data.fromListId, list.id, idx);
+                }
+              }
+            } catch (error) {
+              // Invalid data, ignore
             }
           };
 
-          const handleDragOverCard = (e) => e.preventDefault();
+          const handleDragOverCard = (e) => {
+            try {
+              const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+              if (data.cardId && data.fromListId) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.dataTransfer.dropEffect = "move";
+                setDragOverIndex(idx);
+              }
+            } catch (error) {
+              // Invalid data, ignore
+            }
+          };
+
+          const handleDragLeaveCard = (e) => {
+            if (!e.currentTarget.contains(e.relatedTarget)) {
+              setDragOverIndex(null);
+            }
+          };
 
           return (
             <div
               key={id}
+              className={`transition-all ${
+                dragOverIndex === idx
+                  ? "pt-2 border-t-2 border-obsidian-border border-dashed"
+                  : ""
+              }`}
               onDrop={handleDropOnCard}
               onDragOver={handleDragOverCard}
+              onDragLeave={handleDragLeaveCard}
             >
               <Card card={card} />
             </div>

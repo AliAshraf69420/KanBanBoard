@@ -1,13 +1,22 @@
 import { createBoardSnapshot, createCard, createList } from "../utils/models";
+import { v4 as uuidv4 } from "uuid";
 
 export function boardReducer(state, action) {
   switch (action.type) {
     case "ADD_LIST": {
       const newList = createList({ title: action.payload.title });
+      const syncItem = {
+        id: uuidv4(),
+        type: "ADD_LIST",
+        payload: { ...newList },
+        clientVersion: state.version || 0,
+      };
       return {
         ...state,
         lists: { ...state.lists, [newList.id]: newList },
         listOrder: [...(state.listOrder || []), newList.id],
+        version: (state.version || 0) + 1,
+        syncQueue: [...(state.syncQueue || []), syncItem],
         undoStack: [...state.undoStack, createBoardSnapshot(state)],
         redoStack: [],
       };
@@ -21,6 +30,13 @@ export function boardReducer(state, action) {
         (id) => id !== newCard.id
       );
 
+      const syncItem = {
+        id: uuidv4(),
+        type: "ADD_CARD",
+        payload: { ...newCard },
+        clientVersion: state.version || 0,
+      };
+
       return {
         ...state,
         cards: { ...state.cards, [newCard.id]: newCard },
@@ -31,6 +47,8 @@ export function boardReducer(state, action) {
             cardIds: [...oldCardIds, newCard.id],
           },
         },
+        version: (state.version || 0) + 1,
+        syncQueue: [...(state.syncQueue || []), syncItem],
         undoStack: [...state.undoStack, createBoardSnapshot(state)],
         redoStack: [],
       };
@@ -38,9 +56,17 @@ export function boardReducer(state, action) {
 
     case "UPDATE_LIST": {
       const { listId, title } = action.payload;
+      const syncItem = {
+        id: uuidv4(),
+        type: "UPDATE_LIST",
+        payload: { listId, title },
+        clientVersion: state.version || 0,
+      };
       return {
         ...state,
         lists: { ...state.lists, [listId]: { ...state.lists[listId], title } },
+        version: (state.version || 0) + 1,
+        syncQueue: [...(state.syncQueue || []), syncItem],
         undoStack: [...state.undoStack, createBoardSnapshot(state)],
         redoStack: [],
       };
@@ -48,12 +74,20 @@ export function boardReducer(state, action) {
 
     case "UPDATE_CARD": {
       const { cardId, updates } = action.payload;
+      const syncItem = {
+        id: uuidv4(),
+        type: "UPDATE_CARD",
+        payload: { cardId, updates },
+        clientVersion: state.version || 0,
+      };
       return {
         ...state,
         cards: {
           ...state.cards,
           [cardId]: { ...state.cards[cardId], ...updates },
         },
+        version: (state.version || 0) + 1,
+        syncQueue: [...(state.syncQueue || []), syncItem],
         undoStack: [...state.undoStack, createBoardSnapshot(state)],
         redoStack: [],
       };
@@ -65,11 +99,29 @@ export function boardReducer(state, action) {
       state.lists[listId].cardIds.forEach((cardId) => delete newCards[cardId]);
       const newLists = { ...state.lists };
       delete newLists[listId];
+      
+      // Delete all cards in the list first
+      const cardDeletes = state.lists[listId].cardIds.map((cardId) => ({
+        id: uuidv4(),
+        type: "DELETE_CARD",
+        payload: { cardId },
+        clientVersion: state.version || 0,
+      }));
+      
+      const syncItem = {
+        id: uuidv4(),
+        type: "DELETE_LIST",
+        payload: { listId },
+        clientVersion: state.version || 0,
+      };
+      
       return {
         ...state,
         lists: newLists,
         cards: newCards,
         listOrder: (state.listOrder || []).filter((id) => id !== listId),
+        version: (state.version || 0) + 1,
+        syncQueue: [...(state.syncQueue || []), ...cardDeletes, syncItem],
         undoStack: [...state.undoStack, createBoardSnapshot(state)],
         redoStack: [],
       };
@@ -79,6 +131,12 @@ export function boardReducer(state, action) {
       const { listId, cardId } = action.payload;
       const newCards = { ...state.cards };
       delete newCards[cardId];
+      const syncItem = {
+        id: uuidv4(),
+        type: "DELETE_CARD",
+        payload: { cardId },
+        clientVersion: state.version || 0,
+      };
       return {
         ...state,
         cards: newCards,
@@ -89,6 +147,8 @@ export function boardReducer(state, action) {
             cardIds: state.lists[listId].cardIds.filter((id) => id !== cardId),
           },
         },
+        version: (state.version || 0) + 1,
+        syncQueue: [...(state.syncQueue || []), syncItem],
         undoStack: [...state.undoStack, createBoardSnapshot(state)],
         redoStack: [],
       };
@@ -105,6 +165,13 @@ export function boardReducer(state, action) {
       newToCardIds = newToCardIds.filter((id) => id !== cardId); // prevent duplicate
       newToCardIds.splice(targetIndex, 0, cardId);
 
+      const syncItem = {
+        id: uuidv4(),
+        type: "MOVE_CARD",
+        payload: { cardId, fromListId, toListId, targetIndex },
+        clientVersion: state.version || 0,
+      };
+
       return {
         ...state,
         cards: {
@@ -116,6 +183,8 @@ export function boardReducer(state, action) {
           [fromListId]: { ...fromList, cardIds: newFromCardIds },
           [toListId]: { ...toList, cardIds: newToCardIds },
         },
+        version: (state.version || 0) + 1,
+        syncQueue: [...(state.syncQueue || []), syncItem],
         undoStack: [...state.undoStack, createBoardSnapshot(state)],
         redoStack: [],
       };
@@ -131,6 +200,7 @@ export function boardReducer(state, action) {
       listOrder.splice(fromIndex, 1);
       listOrder.splice(toIndex, 0, draggedListId);
 
+      // MOVE_LIST doesn't need to sync (listOrder is client-only for UI)
       return {
         ...state,
         listOrder,
